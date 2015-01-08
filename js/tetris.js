@@ -5,14 +5,47 @@ var out = function() {
 	if (debug) console.log.apply(console, arguments);
 }
 
-var choose = function (list) {
-	return list[Math.floor(Math.random() * list.length)];
-}
+
+var EvenChooser = function (arr) {
+	this.COPIES = 3;
+	this.REMOVE = 3;
+	this.arr = arr;
+	this.queue = [];
+};
+
+EvenChooser.prototype.next = function() {
+	if (this.queue.length == 0)
+		this.fill_queue();
+	out("About to pop:", this);
+	return this.queue.pop();
+};
+
+EvenChooser.prototype.fill_queue = function() {
+	out("Filling Queue with",this.arr);
+	this.queue = [];
+	for (var i = 0; i < this.COPIES; i++)
+		this.queue = this.queue.concat(this.arr);
+	this.shuffle(this.queue);
+	for (var i = 0; i < this.REMOVE; i++)
+		this.queue.pop();
+};
+
+EvenChooser.prototype.shuffle = function(arr) {
+	for (var i = arr.length - 1; i >= 0; i--) {
+		var other_i = Math.floor(Math.random() * i);
+
+		var temp = arr[i];
+		arr[i] = arr[other_i];
+		arr[other_i] = temp;
+	};
+	out("Queue of Pieces:",arr)
+	return arr;
+};
 
 
 var BACKGROUND = "#555";
-var FOREGROUND = "#fff"
-var BORDER = "#111";
+var FOREGROUND = "#fff";
+
 
 
 var rotate_block = function(cell, center) {
@@ -154,7 +187,8 @@ Piece.prototype.rotateCW = function() {
 
 var Board = function(painter, dx, dy, width, height, cell_size) {
 	this.cell_size = cell_size;
-	this.border_percent = 0.07;
+	this.border_percent = 0.04;
+	this.border_color = "#111";
 
 	this.x = dx;
 	this.y = dy;
@@ -168,6 +202,9 @@ var Board = function(painter, dx, dy, width, height, cell_size) {
 
 	this.down_blocks = [];
 	this.painter = painter;
+
+	this.piece_chooser = new EvenChooser(['I','J','L','S','Z','T','O']);
+	out("Chooser:",this.piece_chooser);
 
 	this.add_piece();
 }
@@ -236,8 +273,11 @@ Board.prototype.handle_clear = function() {
 	}
 };
 
-Board.prototype.add_piece = function() {
-	this.piece = new Piece(-3, 5, choose(['I','J','L','S','Z','T','O']));
+Board.prototype.add_piece = function(char, r, c) {
+	char = char || this.piece_chooser.next();
+	r = r || -3;
+	c = c || 5; 
+	this.piece = new Piece(r, c, char);
 	if (this.check_piece_collision(this.piece))
 		throw "Game Over";
 };
@@ -300,7 +340,7 @@ Board.prototype.draw_cell = function(block) {
 			y = this.dy + this.cell_size * row_num,
 			w = this.cell_size,
 			h = this.cell_size;
-		this.painter.fillStyle = BORDER;
+		this.painter.fillStyle = this.border_color;
 		this.painter.fillRect(x, y, w, h);
 		this.painter.fillStyle = color;
 		this.painter.fillRect(x + border, y + border,
